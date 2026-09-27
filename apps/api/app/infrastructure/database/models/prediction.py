@@ -1,9 +1,12 @@
-from sqlalchemy import BigInteger, Float, ForeignKey, Integer, JSON, String, Text
+from sqlalchemy import BigInteger, Float, ForeignKey, Index, Integer, JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from apps.api.app.infrastructure.database.base import Base, UUIDPrimaryKeyMixin, TimestampMixin, WorkspaceMixin
 
 class Prediction(Base, UUIDPrimaryKeyMixin, TimestampMixin, WorkspaceMixin):
     __tablename__ = "predictions"
+    __table_args__ = (
+        Index("ix_predictions_workspace_created", "workspace_id", "created_at"),
+    )
 
     deployment_id: Mapped[str] = mapped_column(String(36), ForeignKey("deployments.id"), nullable=False, index=True)
     model_version_id: Mapped[str] = mapped_column(String(36), ForeignKey("model_versions.id"), nullable=False, index=True)

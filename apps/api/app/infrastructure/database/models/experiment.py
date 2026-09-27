@@ -1,9 +1,12 @@
-from sqlalchemy import Boolean, Float, ForeignKey, Integer, JSON, String, Text
+from sqlalchemy import Boolean, Float, ForeignKey, Index, Integer, JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from apps.api.app.infrastructure.database.base import Base, UUIDPrimaryKeyMixin, TimestampMixin, WorkspaceMixin
 
 class Experiment(Base, UUIDPrimaryKeyMixin, TimestampMixin, WorkspaceMixin):
     __tablename__ = "experiments"
+    __table_args__ = (
+        Index("ix_experiments_workspace_created", "workspace_id", "created_at"),
+    )
 
     name: Mapped[str] = mapped_column(String(150), nullable=False, index=True)
     description: Mapped[str] = mapped_column(Text, nullable=True)

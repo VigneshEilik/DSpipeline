@@ -1,3 +1,4 @@
+import asyncio
 import io
 import time
 import traceback
@@ -8,9 +9,21 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from apps.api.app.infrastructure.database.models import DatasetVersion, Experiment, ExperimentMetric, TrainingJob
 from apps.api.app.infrastructure.database.session import AsyncSessionLocal
 from apps.api.app.infrastructure.storage import get_storage_service
+from apps.worker.app.celery_app import celery_app
 from ml.pipelines.training.trainer import train_churn_model
 
-async def execute_training_job_async(job_id: str, experiment_id: str, workspace_id: str):
+@celery_app.task(
+    bind=True,
+    max_retries=3,
+    default_retry_delay=30,
+    name="tasks.training.execute_job",
+    autoretry_for=(ConnectionError, TimeoutError),
+)
+def celery_training_job_task(self, job_id: str, experiment_id: str, workspace_id: str):
+    """Celery worker synchronous task wrapper for asynchronous training routine."""
+    return asyncio.run(execute_training_job_async(job_id, experiment_id, workspace_id, celery_task_id=self.request.id))
+
+async def execute_training_job_async(job_id: str, experiment_id: str, workspace_id: str, celery_task_id: str = None):
     storage = get_storage_service()
     start_time = time.time()
 
@@ -28,6 +41,8 @@ async def execute_training_job_async(job_id: str, experiment_id: str, workspace_
         try:
             job.status = "RUNNING"
             experiment.status = "RUNNING"
+            if celery_task_id:
+                job.celery_task_id = celery_task_id
             job.progress_percentage = 10
             job.logs = f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Training job started.\n"
             await session.commit()

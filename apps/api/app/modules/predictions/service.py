@@ -44,11 +44,12 @@ class PredictionService:
         if not deployment:
             raise NotFoundException("Active Deployment", req.deployment_id or "default")
 
-        # 2. Retrieve or load predictor from cache
-        predictor = serving_cache.get_predictor(deployment.id)
+        # 2. Retrieve or load predictor from cache using immutable model_version_id
+        version_id = deployment.model_version_id
+        predictor = serving_cache.get_predictor(version_id)
         if not predictor:
-            predictor = await serving_cache.load_predictor_for_deployment(
-                deployment.id, deployment.model_version.artifact_uri
+            predictor = await serving_cache.get_or_load_version(
+                version_id, deployment.model_version.artifact_uri
             )
 
         # 3. Execute inference

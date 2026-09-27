@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.api.app.api.dependencies import get_current_user
+from apps.api.app.core.config import settings
 from apps.api.app.infrastructure.database.models import User
 from apps.api.app.infrastructure.database.session import get_db
 from apps.api.app.modules.auth.schemas import (
@@ -29,8 +30,8 @@ async def register(
         key="access_token",
         value=token_data.access_token,
         httponly=True,
-        samesite="lax",
-        secure=False,  # Set to True in HTTPS production
+        samesite=settings.COOKIE_SAMESITE,
+        secure=settings.SECURE_COOKIES,
         max_age=token_data.expires_in,
     )
 
@@ -50,8 +51,8 @@ async def login(
         key="access_token",
         value=token_data.access_token,
         httponly=True,
-        samesite="lax",
-        secure=False,
+        samesite=settings.COOKIE_SAMESITE,
+        secure=settings.SECURE_COOKIES,
         max_age=token_data.expires_in,
     )
 
@@ -59,7 +60,11 @@ async def login(
 
 @router.post("/logout", response_model=APIResponse[dict])
 async def logout(response: Response):
-    response.delete_cookie(key="access_token")
+    response.delete_cookie(
+        key="access_token",
+        samesite=settings.COOKIE_SAMESITE,
+        secure=settings.SECURE_COOKIES,
+    )
     return APIResponse(data={"logged_out": True}, message="Successfully logged out.")
 
 @router.get("/me", response_model=APIResponse[UserProfileResponse])
@@ -75,10 +80,17 @@ async def get_me(
 async def bootstrap_dev_user(db: AsyncSession = Depends(get_db)):
     """
     Development-only bootstrap endpoint to guarantee a test user exists.
+    Strictly blocked in production.
     """
+    if settings.ENVIRONMENT == "production":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Development bootstrap endpoint is disabled in production environments."
+        )
+
     service = AuthService(db)
     req = RegisterRequest(
-        email="dev@modelops.local",
+        email="dev@modelops.io",
         password="ModelOpsPassword123!",
         full_name="Lead Data Scientist",
         workspace_name="Acme Churn Intelligence",
@@ -88,6 +100,6 @@ async def bootstrap_dev_user(db: AsyncSession = Depends(get_db)):
         return APIResponse(data=token_data, message="Development user bootstrapped.")
     except Exception:
         # If already bootstrapped, log in
-        login_req = LoginRequest(email="dev@modelops.local", password="ModelOpsPassword123!")
+        login_req = LoginRequest(email="dev@modelops.io", password="ModelOpsPassword123!")
         user, token_data = await service.login(login_req)
         return APIResponse(data=token_data, message="Development user authenticated.")

@@ -1,0 +1,38 @@
+groups:
+  - name: modelops_alerts
+    rules:
+      - alert: APIUnavailable
+        expr: up{job="modelops-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "ModelOps API instance unavailable"
+          description: "ModelOps API has been down for more than 1 minute."
+
+      - alert: HighHTTP5xxErrorRate
+        expr: (sum(rate(modelops_http_requests_total{status_code=~"5.."}[5m])) / sum(rate(modelops_http_requests_total[5m]))) * 100 > 5
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High HTTP 5xx error rate detected (>5%)"
+          description: "The 5xx error rate on ModelOps Studio API has exceeded 5% over the past 5 minutes."
+
+      - alert: HighInferenceLatencyP95
+        expr: histogram_quantile(0.95, sum(rate(modelops_http_request_duration_seconds_bucket{endpoint=~".*prediction.*"}[5m])) by (le)) > 0.50
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Model inference p95 latency exceeded 500ms"
+          description: "Real-time customer churn prediction p95 latency is {{ $value }}s, exceeding SLA threshold of 500ms."
+
+      - alert: HighRequestVolumeSpike
+        expr: sum(rate(modelops_http_requests_total[2m])) > 100
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Abnormal API traffic spike"
+          description: "Request volume has spiked beyond 100 req/s."

@@ -81,7 +81,7 @@ class DeploymentService:
 
         # 6. Preload model artifact in serving cache
         try:
-            await serving_cache.load_predictor_for_deployment(deployment.id, version.artifact_uri)
+            await serving_cache.get_or_load_version(version.id, version.artifact_uri)
         except Exception as e:
             # If load fails, update deployment status
             deployment.status = "FAILED"
@@ -141,7 +141,7 @@ class DeploymentService:
                 created_at=e.created_at.isoformat(),
                 details=e.details,
             )
-            for e in sorted(d.events, key=lambda x: x.created_at, reverse=True)
+            for e in sorted(d.events, key=lambda x: str(x.created_at), reverse=True)
         ]
 
         return DeploymentDetailResponse(
@@ -195,8 +195,7 @@ class DeploymentService:
         self.db.add(event)
         await self.db.commit()
 
-        # Update cache
-        serving_cache.evict(dep.id)
-        await serving_cache.load_predictor_for_deployment(dep.id, target_version.artifact_uri)
+        # Preload target version in cache
+        await serving_cache.get_or_load_version(target_version.id, target_version.artifact_uri)
 
         return await self.get_deployment(workspace_id, dep.id)

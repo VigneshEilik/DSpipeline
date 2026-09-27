@@ -34,7 +34,24 @@ class DatasetService:
         domain: str = "churn",
         target_column: str = "Churn",
     ) -> DatasetDetailResponse:
-        # 1. Verify CSV and calculate hash
+        # 1. Deep content sniffing & security validation
+        if not file_bytes or len(file_bytes) == 0:
+            raise ModelOpsException("Uploaded file is empty.")
+
+        # Check for binary executable / archive magic bytes
+        magic = file_bytes[:8]
+        if magic.startswith(b"MZ") or magic.startswith(b"\x7fELF") or magic.startswith(b"PK\x03\x04") or magic.startswith(b"%PDF"):
+            raise ModelOpsException("Malicious or unsupported file type detected. File must be valid text/CSV.")
+
+        # Check for null bytes indicating binary content
+        if b"\x00" in file_bytes[:4096]:
+            raise ModelOpsException("Uploaded file contains binary data and is not a valid text CSV file.")
+
+        # Check for embedded script tags
+        head_sample = file_bytes[:2048].lower()
+        if b"<script" in head_sample or b"<html" in head_sample:
+            raise ModelOpsException("Malicious payload detected: HTML or script elements in CSV data are prohibited.")
+
         checksum = hashlib.sha256(file_bytes).hexdigest()
 
         try:

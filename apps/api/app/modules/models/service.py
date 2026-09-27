@@ -1,5 +1,5 @@
 from typing import List, Optional
-from sqlalchemy import desc, select
+from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -54,7 +54,10 @@ class ModelRegistryService:
             await self.db.flush()
             version_number = 1
         else:
-            version_number = len(registry.versions) + 1
+            c_res = await self.db.execute(
+                select(func.count(ModelVersion.id)).where(ModelVersion.model_registry_id == registry.id)
+            )
+            version_number = (c_res.scalar() or 0) + 1
 
         # 3. Create ModelVersion
         m_version = ModelVersion(
@@ -79,6 +82,7 @@ class ModelRegistryService:
             )
             .where(ModelRegistry.workspace_id == workspace_id)
             .order_by(desc(ModelRegistry.created_at))
+            .execution_options(populate_existing=True)
         )
         res = await self.db.execute(stmt)
         registries = res.scalars().all()
@@ -109,7 +113,6 @@ class ModelRegistryService:
                 for v in sorted(reg.versions, key=lambda x: x.version_number, reverse=True)
             ]
             latest = version_responses[0] if version_responses else None
-
             responses.append(
                 ModelRegistryResponse(
                     id=reg.id,
@@ -133,6 +136,7 @@ class ModelRegistryService:
                 ModelRegistry.id == model_id,
                 ModelRegistry.workspace_id == workspace_id,
             )
+            .execution_options(populate_existing=True)
         )
         res = await self.db.execute(stmt)
         reg = res.scalar_one_or_none()

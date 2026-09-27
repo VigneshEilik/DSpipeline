@@ -83,21 +83,17 @@ Status definitions:
 
 ---
 
-## Milestone 5: Observability & Drift Monitoring
+## Milestone 5: Production Hardening, Infrastructure, CI/CD & Reliability
 | Task / Feature | Status | Notes |
 | :--- | :--- | :--- |
-| Prometheus Metrics Instrumentation | **Verified** | `/metrics` endpoint with counters & latency histograms |
-| Grafana Provisioning & Dashboards | **Verified** | Provisioning datasources & dashboard JSON created |
-| Data Drift Engine (Evidently / SciPy) | Not started | Milestone 5 |
-| Monitoring API & UI Integration | Not started | Milestone 5 |
-
----
-
-## Milestone 6: Deployment, CI/CD & Final Verification
-| Task / Feature | Status | Notes |
-| :--- | :--- | :--- |
-| Multi-Stage Dockerfiles | **Verified** | Web, API, and Worker Dockerfiles written |
-| GitHub Actions Workflows | Not started | Milestone 6 |
-| End-to-End User Journey Tests | Not started | Milestone 6 |
-| Comprehensive Documentation | In progress | Architecture and ADRs written; root README to follow |
-| Final Acceptance Verification | Not started | Milestone 6 |
+| Production Readiness Audit | **Verified** | Comprehensive audit in `docs/production/readiness-audit.md` |
+| Security Hardening & Rate Limiting | **Verified** | Request body size limits, security headers, rate-limiting (120 req/min), deep CSV sniffing, dev bootstrap guard (`test_security_attacks.py`) |
+| Multi-Process Model Serving & Atomic Rollback | **Verified** | Immutable-version-keyed serving cache with SHA-256 integrity verification (`test_model_serving_consistency.py`) |
+| Database Connection Pooling & Compound Indexes | **Verified** | PostgreSQL pooling parameters, compound indexes on `deployments`, `predictions`, `experiments` with Alembic migration |
+| Hardened Production Docker & Compose | **Verified** | Non-root `appuser` Dockerfiles, internal network isolation, `docker-compose.prod.yml` with resource limits |
+| Bounded Observability & Prometheus Alerts | **Verified** | Normalized endpoint path metrics labels, Prometheus alert rules (`alert.rules.yml`), Grafana provisioning |
+| Automated Security & Attack Test Suite | **Verified** | Malicious CSV executable injection, null bytes, script tags, production bootstrap blockers (18/18 pytest passing) |
+| Performance Benchmark & Capacity Report | **Verified** | 200 real-time inferences benchmarked: 40.63 req/s, 24.61ms mean latency, 0.00% error rate (`docs/production/performance-report.md`) |
+| GitHub Actions Workflows | **Verified** | CI test & build pipeline (`ci.yml`), release container build (`release.yml`) |
+| Production Documentation & Runbooks | **Verified** | Deployment guide, operations runbook, backup & restore, security checklist, incident response authored |
+| Next.js Production Build | **Verified** | `next build` compiled cleanly (0 errors, 12 static routes generated) |

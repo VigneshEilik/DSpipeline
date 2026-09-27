@@ -120,7 +120,7 @@ async def test_complete_mlops_lifecycle_api():
                 "traffic_percentage": 100,
             },
         )
-        assert deploy_res.status_code == 201
+        assert deploy_res.status_code == 201, f"Deploy failed: {deploy_res.status_code} - {deploy_res.text}"
         deployment_data = deploy_res.json()["data"]
         deployment_id = deployment_data["id"]
         assert deployment_data["status"] == "ACTIVE"
