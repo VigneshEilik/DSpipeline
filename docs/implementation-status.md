@@ -55,14 +55,14 @@ Status definitions:
 ## Milestone 3: Backend APIs & Background Job Processing
 | Task / Feature | Status | Notes |
 | :--- | :--- | :--- |
-| Authentication & Workspace Tenant Isolation | Not started | Next milestone |
-| Datasets Management API | Not started | Next milestone |
-| Asynchronous Worker Execution | Not started | Next milestone |
-| Experiments Tracking API | Not started | Next milestone |
-| Model Registry & Approval Lifecycle API | Not started | Next milestone |
-| Deployments Management API | Not started | Next milestone |
-| Real-time & Batch Prediction APIs | Not started | Next milestone |
-| Backend Integration Tests | Not started | Next milestone |
+| Authentication & Workspace Tenant Isolation | **Verified** | JWT auth, Argon2id passwords, multi-tenant workspace extraction & role checks (`test_auth_and_workspaces.py`, `test_tenant_isolation.py`) |
+| Datasets Management API | **Verified** | Multipart CSV upload, validation, paginated preview (`/datasets/{id}/preview`), checksum tracking |
+| Asynchronous Worker Execution | **Verified** | Celery tasks with in-process resilient execution fallback (`runner.py`) |
+| Experiments Tracking API | **Verified** | Background training, honest status transitions, live logs, real evaluation metrics |
+| Model Registry & Approval Lifecycle API | **Verified** | Model registration, lineage, metadata, approval gate (`APPROVED`/`REJECTED`) |
+| Deployments Management API | **Verified** | In-process model serving cache (`serving_cache.py`), atomic rollback, deployment events |
+| Real-time & Batch Prediction APIs | **Verified** | Single customer churn inference with risk classification & DB persistence, batch CSV task |
+| Backend Integration Tests | **Verified** | 15/15 tests passing in pytest (unit, integration, ML, security, tenant isolation) |
 
 ---
 
@@ -70,15 +70,16 @@ Status definitions:
 | Task / Feature | Status | Notes |
 | :--- | :--- | :--- |
 | Material 3 Design Tokens & CSS Variables | **Verified** | Defined in `globals.css` and `tailwind.config.ts` |
-| Application Shell & Navigation | In progress | Dashboard layout, sidebar, topbar |
-| Overview Dashboard Page | Not started | Milestone 4 |
-| Datasets Explorer Page | Not started | Milestone 4 |
-| Experiments Page | Not started | Milestone 4 |
-| Model Registry Page | Not started | Milestone 4 |
-| Deployments Page | Not started | Milestone 4 |
-| Predictions Page | Not started | Milestone 4 |
-| Monitoring & Drift Page | Not started | Milestone 4 |
-| Settings Page | Not started | Milestone 4 |
+| Application Shell & Navigation | **Verified** | Material 3 AppShell, responsive sidebar, top app bar, workspace context switcher |
+| Overview Dashboard Page | **Verified** | Real telemetry metrics, experiment activity, prediction volume, model latency |
+| Datasets Explorer Page | **Verified** | CSV drag-and-drop upload modal, paginated preview, schema validation |
+| Experiments Page | **Verified** | Training job submission modal, live logs & real metrics |
+| Model Registry Page | **Verified** | Model version history, lineage, approval/rejection action dialogs |
+| Deployments Page | **Verified** | Active deployment management, atomic rollback confirmation, health status |
+| Predictions Page | **Verified** | Real-time churn inference form with risk chips, batch CSV prediction |
+| Monitoring & Drift Page | **Verified** | Latency percentiles (p50/p95/p99), risk distribution, KS data drift triggers |
+| Settings Page | **Verified** | Workspace info, role-based member management, system info |
+| Next.js Production Build | **Verified** | `next build` compiled cleanly (0 errors, 12 static routes generated) |
 
 ---
 

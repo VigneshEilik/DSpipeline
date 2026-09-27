@@ -130,3 +130,8 @@ async def root():
         "docs": "/docs",
         "status": "running",
     }
+
+# Mount API v1 domain router
+from apps.api.app.api.v1.router import api_v1_router
+app.include_router(api_v1_router)
+

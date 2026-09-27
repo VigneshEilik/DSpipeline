@@ -9,7 +9,7 @@ class ModelRegistry(Base, UUIDPrimaryKeyMixin, TimestampMixin, WorkspaceMixin):
     description: Mapped[str] = mapped_column(Text, nullable=True)
     task_type: Mapped[str] = mapped_column(String(50), default="binary_classification", nullable=False)
 
-    versions: Mapped[list["ModelVersion"]] = relationship(back_populates="registry", cascade="all, delete-orphan")
+    versions: Mapped[list["ModelVersion"]] = relationship(back_populates="model_registry", cascade="all, delete-orphan")
 
 class ModelVersion(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     __tablename__ = "model_versions"
