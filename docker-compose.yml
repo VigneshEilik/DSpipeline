@@ -1,0 +1,207 @@
+services:
+  # ----------------------------------------------------
+  # Relational Database: PostgreSQL
+  # ----------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: modelops-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-modelops_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ----------------------------------------------------
+  # Cache & Celery Broker: Redis
+  # ----------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: modelops-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ----------------------------------------------------
+  # Object Storage: MinIO
+  # ----------------------------------------------------
+  minio:
+    image: minio/minio:RELEASE.2024-05-10T01-41-38Z
+    container_name: modelops-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # Create MinIO default bucket
+  minio-init:
+    image: minio/mc:RELEASE.2024-05-09T17-04-24Z
+    container_name: modelops-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin;
+      /usr/bin/mc mb myminio/modelops-artifacts --ignore-existing;
+      /usr/bin/mc anonymous set download myminio/modelops-artifacts;
+      exit 0;
+      "
+
+  # ----------------------------------------------------
+  # MLflow Tracking Server
+  # ----------------------------------------------------
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.16.0
+    container_name: modelops-mlflow
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    ports:
+      - "5000:5000"
+    environment:
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+    command: >
+      mlflow server
+      --backend-store-uri postgresql://postgres:postgres@postgres:5432/modelops_db
+      --default-artifact-root s3://modelops-artifacts/mlflow
+      --host 0.0.0.0
+      --port 5000
+
+  # ----------------------------------------------------
+  # Metrics & Observability: Prometheus
+  # ----------------------------------------------------
+  prometheus:
+    image: prom/prometheus:v2.54.0
+    container_name: modelops-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+
+  # ----------------------------------------------------
+  # Dashboards: Grafana
+  # ----------------------------------------------------
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: modelops-grafana
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana-data:/var/lib/grafana
+
+  # ----------------------------------------------------
+  # Backend API Service
+  # ----------------------------------------------------
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: modelops-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/modelops_db
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - MINIO_ENDPOINT=minio:9000
+      - STORAGE_BACKEND=s3
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - ALLOWED_ORIGINS=http://localhost:3000,http://web:3000
+
+  # ----------------------------------------------------
+  # Celery Asynchronous Worker
+  # ----------------------------------------------------
+  worker:
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile
+    container_name: modelops-worker
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      - ENVIRONMENT=production
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/modelops_db
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - MINIO_ENDPOINT=minio:9000
+      - STORAGE_BACKEND=s3
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+
+  # ----------------------------------------------------
+  # Web Frontend: Next.js
+  # ----------------------------------------------------
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: modelops-web
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
+
+volumes:
+  postgres-data:
+  redis-data:
+  minio-data:
+  prometheus-data:
+  grafana-data:

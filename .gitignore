@@ -1,0 +1,83 @@
+# Operating System files
+.DS_Store
+Thumbs.db
+
+# Environments & Virtual Envs
+.venv/
+env/
+venv/
+ENV/
+*.pyc
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+build/
+dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Python distribution / packaging
+*.egg-info/
+.eggs/
+*.egg
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+
+# Tests & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+test-results/
+playwright-report/
+blob-report/
+
+# MLflow
+mlruns/
+.mlflow/
+
+# Data & Artifacts (Keep raw large binaries and data out of git)
+data/
+datasets/samples/*.csv
+!datasets/samples/telco_churn_sample.csv
+storage/
+minio-data/
+postgres-data/
+redis-data/
+*.db
+*.sqlite
+*.sqlite3
+
+# IDE / Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment & Secrets (NEVER commit actual secret env files)
+.env
+.env.local
+.env.production
+.env.staging
+!.env.example
